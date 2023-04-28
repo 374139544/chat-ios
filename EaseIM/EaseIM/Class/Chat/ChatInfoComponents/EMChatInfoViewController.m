@@ -255,12 +255,11 @@
     }
     if (section == 3) {
         if (row == 0) {
-            //置顶
-            if (aSwitch.isOn) {
-                [self.conversationModel setIsTop:YES];
-            } else {
-                [self.conversationModel setIsTop:NO];
-            }
+            [EMClient.sharedClient.chatManager pinConversation:self.conversation.conversationId isPinned:aSwitch.isOn completionBlock:^(EMError * _Nullable error) {
+                if (error) {
+                    [weakself showHint:error.errorDescription];
+                }
+            }];
         }
     }
 }

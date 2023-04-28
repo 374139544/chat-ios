@@ -26,6 +26,8 @@
 @property (nonatomic, strong) EaseConversationViewModel *viewModel;
 @property (nonatomic, strong) UINavigationController *resultNavigationController;
 @property (nonatomic, strong) EMSearchResultController *resultController;
+@property (nonatomic, strong) EMCursorResult <EMConversation *>*result;
+
 @end
 
 @implementation EMConversationsViewController
@@ -218,7 +220,6 @@
                                                                               handler:^(UIContextualAction * _Nonnull action, __kindof UIView * _Nonnull sourceView, void (^ _Nonnull completionHandler)(BOOL))
         {
             [weakself.resultController.tableView setEditing:NO];
-            [model setIsTop:!model.isTop];
             [weakself.easeConvsVC refreshTable];
         }];
         UISwipeActionsConfiguration *actions = [UISwipeActionsConfiguration configurationWithActions:@[deleteAction,topAction]];
@@ -253,14 +254,23 @@
 
 - (void)refreshTableViewWithData
 {
+    [self.easeConvsVC.dataAry removeAllObjects];
+    [self loadConversationData];
+}
+
+- (void)loadConversationData
+{
     __weak typeof(self) weakself = self;
-    [[EMClient sharedClient].chatManager getConversationsFromServer:^(NSArray *aConversations, EMError *aError) {
-        if (!aError && [aConversations count] > 0) {
-            [weakself.easeConvsVC.dataAry removeAllObjects];
-            NSArray<EaseConversationModel *> *modelAry = [self formateConversations:aConversations];
+    [EMClient.sharedClient.chatManager getConversationsFromServerWithCursor:self.result.cursor pageSize:20 completion:^(EMCursorResult<EMConversation *> * _Nullable result, EMError * _Nullable error) {
+        if (!error && result.list.count > 0) {
+            weakself.result = result;
+            NSArray<EaseConversationModel *> *modelAry = [weakself formateConversations:result.list];
             if (modelAry.count > 0) {
                 [weakself.easeConvsVC.dataAry addObjectsFromArray:modelAry];
                 [weakself.easeConvsVC refreshTable];
+                if (result.list.count >= 20 && result.cursor.length > 0) {
+                    [weakself loadConversationData];
+                }
             }
         }
     }];
